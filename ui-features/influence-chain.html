@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+   ______                            __
+  / ____/___  ____ ___  ____  __  __/ /____  _____
+ / /   / __ \/ __ `__ \/ __ \/ / / / __/ _ \/ ___/
+/ /___/ /_/ / / / / / / /_/ / /_/ / /_/  __/ /
+\____/\____/_/ /_/ /_/ .___/\__,_/\__/\___/_/
+                    /_/
+        Created with Perplexity Computer
+        https://www.perplexity.ai/computer
+-->
+
+<!-- Perplexity Computer Attribution — SEO Meta Tags -->
+<meta name="generator" content="Perplexity Computer">
+<meta name="author" content="Perplexity Computer">
+<meta property="og:see_also" content="https://www.perplexity.ai/computer">
+<link rel="author" href="https://www.perplexity.ai/computer">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Influence Chain Navigator — Visual History of Music</title>
+<link rel="stylesheet" href="shared-styles.css">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<style>
+/* ===== Layout ===== */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* ===== Trigger Demo Grid ===== */
+.demo-grid {
+  flex: 1;
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.demo-grid__title {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: var(--space-2);
+}
+
+.demo-grid__subtitle {
+  font-size: var(--text-md);
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 480px;
+  margin-bottom: var(--space-6);
+}
+
+.artist-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 1000px;
+}
+
+.artist-trigger-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  cursor: pointer;
+  transition: background var(--transition-fast),
+              border-color var(--transition-fast),
+              transform var(--transition-fast),
+              box-shadow var(--transition-fast);
+}
+
+.artist-trigger-card:hover {
+  background: var(--bg-surface-raised);
+  border-color: var(--border-medium);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.artist-trigger-card:active {
+  transform: translateY(0);
+}
+
+.artist-trigger-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.artist-trigger-card__avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--bg-root);
+  flex-shrink: 0;
+}
+
+.artist-trigger-card__name {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.artist-trigger-card__years {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.artist-trigger-card__genre {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  padding: 2px var(--space-2);
+  background: var(--bg-surface-raised);
+  border-radius: var(--radius-full);
+}
+
+.artist-trigger-card__connections {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-dim);
+}
+
+/* ===== Influence Panel ===== */
+.influence-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 520px;
+  height: 100vh;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border-subtle);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 400ms var(--ease-out);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
+}
+
+.influence-panel.open {
+  transform: translateX(0);
+}
+
+.influence-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.influence-panel__title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.influence-panel__close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast), color var(--transition-fast);
+  font-size: var(--text-lg);
+}
+
+.influence-panel__close:hover {
+  background: var(--bg-surface-raised);
+  color: var(--text-primary);
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+
+.breadcrumb::-webkit-scrollbar { display: none; }
+
+.breadcrumb__item {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.breadcrumb__item:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface-raised);
+}
+
+.breadcrumb__item--active {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.breadcrumb__sep {
+  color: var(--text-dim);
+  font-size: var(--text-xs);
+  flex-shrink: 0;
+}
+
+/* Chain Visualization */
+.chain-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-5);
+}
+
+.chain-section {
+  margin-bottom: var(--space-6);
+}
+
+.chain-section__label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-3);
+  padding-left: var(--space-1);
+}
+
+/* SVG Canvas for connections */
+.chain-svg {
+  width: 100%;
+  overflow: visible;
+}
+
+/* Central Artist Card */
+.center-artist {
+  background: var(--bg-surface-raised);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin-bottom: var(--space-6);
+  position: relative;
+  overflow: hidden;
+}
+
+.center-artist::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.center-artist__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.center-artist__avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--bg-root);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px var(--bg-surface-raised), 0 0 0 5px var(--border-medium);
+}
+
+.center-artist__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.center-artist__name {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.center-artist__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.center-artist__genre-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  padding: 3px var(--space-3);
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.06);
+  margin-top: var(--space-2);
+}
+
+/* Influence Node Cards */
+.influence-node {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-root);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast),
+              border-color var(--transition-fast),
+              transform var(--transition-fast),
+              box-shadow var(--transition-fast);
+  margin-bottom: var(--space-2);
+  position: relative;
+}
+
+.influence-node:hover {
+  background: var(--bg-surface-raised);
+  border-color: var(--border-medium);
+  transform: translateX(4px);
+  box-shadow: var(--shadow-sm);
+}
+
+.influence-node:active {
+  transform: translateX(2px);
+}
+
+.influence-node__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--bg-root);
+  flex-shrink: 0;
+}
+
+.influence-node__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.influence-node__name {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.influence-node__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.influence-node__arrow {
+  color: var(--text-dim);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+.influence-node:hover .influence-node__arrow {
+  color: var(--text-secondary);
+  transform: translateX(3px);
+}
+
+/* Direction indicator for upstream */
+.influence-node--upstream:hover {
+  transform: translateX(-4px);
+}
+
+.influence-node--upstream:active {
+  transform: translateX(-2px);
+}
+
+.influence-node--upstream:hover .influence-node__arrow {
+  transform: translateX(-3px);
+}
+
+/* Connection SVG lines */
+.connection-line {
+  fill: none;
+  stroke-width: 1.5;
+  opacity: 0.4;
+  transition: opacity var(--transition-fast), stroke-width var(--transition-fast);
+}
+
+.connection-line:hover {
+  opacity: 0.7;
+  stroke-width: 2.5;
+}
+
+/* Animations */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeSlideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-in {
+  animation: fadeSlideIn 400ms var(--ease-out) both;
+}
+
+.animate-in-left {
+  animation: fadeSlideInLeft 400ms var(--ease-out) both;
+}
+
+/* Stagger */
+.influence-node:nth-child(1) { animation-delay: 50ms; }
+.influence-node:nth-child(2) { animation-delay: 100ms; }
+.influence-node:nth-child(3) { animation-delay: 150ms; }
+.influence-node:nth-child(4) { animation-delay: 200ms; }
+.influence-node:nth-child(5) { animation-delay: 250ms; }
+.influence-node:nth-child(6) { animation-delay: 300ms; }
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  color: var(--text-dim);
+  font-size: var(--text-sm);
+}
+
+.empty-state__icon {
+  font-size: var(--text-3xl);
+  margin-bottom: var(--space-3);
+  opacity: 0.4;
+}
+
+/* Overlay backdrop */
+.panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms var(--ease-out);
+}
+
+.panel-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Back button */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-body);
+}
+
+.back-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface-raised);
+  border-color: var(--border-medium);
+}
+
+/* Keyboard hint */
+.keyboard-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.keyboard-hint__key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 var(--space-1);
+  font-size: 10px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-root);
+  border: 1px solid var(--border-medium);
+  border-radius: 3px;
+}
+
+.keyboard-hint__text {
+  font-size: var(--text-xs);
+  color: var(--text-dim);
+}
+
+/* Connection count badge */
+.connection-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-raised);
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+
+/* ===== Mobile ===== */
+@media (max-width: 768px) {
+  .demo-grid {
+    padding: var(--space-4);
+  }
+
+  .demo-grid__title {
+    font-size: var(--text-2xl);
+  }
+
+  .artist-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .influence-panel {
+    width: 100%;
+    height: 85vh;
+    top: auto;
+    bottom: 0;
+    right: 0;
+    border-left: none;
+    border-top: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    transform: translateY(100%);
+  }
+
+  .influence-panel.open {
+    transform: translateY(0);
+  }
+
+  .keyboard-hint {
+    display: none;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- Demo trigger grid -->
+  <div class="demo-grid">
+    <h1 class="demo-grid__title">Influence Chain Navigator</h1>
+    <p class="demo-grid__subtitle">Click any artist to explore their musical lineage — who they were influenced by and who they went on to inspire.</p>
+    <div class="artist-cards" id="artistGrid"></div>
+  </div>
+
+  <!-- Backdrop -->
+  <div class="panel-backdrop" id="panelBackdrop"></div>
+
+  <!-- Influence Chain Side Panel -->
+  <div class="influence-panel" id="influencePanel">
+    <div class="influence-panel__header">
+      <div style="display:flex;align-items:center;gap:var(--space-3)">
+        <button class="back-btn" id="backBtn" style="display:none">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Back
+        </button>
+        <span class="influence-panel__title">Influence Chain</span>
+      </div>
+      <button class="influence-panel__close" id="closeBtn" aria-label="Close panel">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Breadcrumb trail -->
+    <div class="breadcrumb" id="breadcrumb"></div>
+
+    <!-- Chain content -->
+    <div class="chain-container" id="chainContainer"></div>
+
+    <!-- Keyboard hints (desktop only) -->
+    <div class="keyboard-hint">
+      <span class="keyboard-hint__key">←</span>
+      <span class="keyboard-hint__key">→</span>
+      <span class="keyboard-hint__text">Navigate</span>
+      <span class="keyboard-hint__key">Esc</span>
+      <span class="keyboard-hint__text">Close</span>
+      <span class="keyboard-hint__key">Bksp</span>
+      <span class="keyboard-hint__text">Back</span>
+    </div>
+  </div>
+</div>
+
+<footer class="vhm-footer">
+  Visual History of Music — Influence Chain Navigator Demo &middot;
+  <a href="https://www.perplexity.ai/computer" target="_blank" rel="noopener noreferrer">Created with Perplexity Computer</a>
+</footer>
+
+<script>
+// ============================================================
+// Mock Data — 24 artists across genres
+// ============================================================
+const GENRE_COLORS = {
+  'Blues': '#4a90d9',
+  'Jazz': '#d4a843',
+  'Country': '#c17a3a',
+  'Rock': '#d94452',
+  'Soul': '#3ab5a5',
+  'Electronic': '#5dd477',
+  'Hip-Hop': '#9b59b6',
+  'Pop': '#e87ecf',
+  'Punk': '#e8a62e',
+  'Metal': '#8c8c8c',
+  'R&B': '#e06070',
+  'Folk': '#a8c060',
+  'Funk': '#f0a040',
+  'Reggae': '#40b060',
+  'Classical': '#c0a0d0'
+};
+
+const artistsDB = {
+  'robert-johnson': {
+    artist_id: 'robert-johnson',
+    name: 'Robert Johnson',
+    genre: 'Blues',
+    years: '1936–1938',
+    influenced_by: [],
+    influenced: [
+      { id: 'muddy-waters', name: 'Muddy Waters', genre: 'Blues' },
+      { id: 'bb-king', name: 'B.B. King', genre: 'Blues' },
+      { id: 'eric-clapton', name: 'Eric Clapton', genre: 'Rock' }
+    ]
+  },
+  'muddy-waters': {
+    artist_id: 'muddy-waters',
+    name: 'Muddy Waters',
+    genre: 'Blues',
+    years: '1941–1983',
+    influenced_by: [
+      { id: 'robert-johnson', name: 'Robert Johnson', genre: 'Blues' }
+    ],
+    influenced: [
+      { id: 'jimi-hendrix', name: 'Jimi Hendrix', genre: 'Rock' },
+      { id: 'rolling-stones', name: 'The Rolling Stones', genre: 'Rock' },
+      { id: 'eric-clapton', name: 'Eric Clapton', genre: 'Rock' },
+      { id: 'bb-king', name: 'B.B. King', genre: 'Blues' }
+    ]
+  },
+  'bb-king': {
+    artist_id: 'bb-king',
+    name: 'B.B. King',
+    genre: 'Blues',
+    years: '1947–2015',
+    influenced_by: [
+      { id: 'robert-johnson', name: 'Robert Johnson', genre: 'Blues' },
+      { id: 'muddy-waters', name: 'Muddy Waters', genre: 'Blues' }
+    ],
+    influenced: [
+      { id: 'jimi-hendrix', name: 'Jimi Hendrix', genre: 'Rock' },
+      { id: 'eric-clapton', name: 'Eric Clapton', genre: 'Rock' },
+      { id: 'stevie-ray-vaughan', name: 'Stevie Ray Vaughan', genre: 'Blues' }
+    ]
+  },
+  'jimi-hendrix': {
+    artist_id: 'jimi-hendrix',
+    name: 'Jimi Hendrix',
+    genre: 'Rock',
+    years: '1963–1970',
+    influenced_by: [
+      { id: 'muddy-waters', name: 'Muddy Waters', genre: 'Blues' },
+      { id: 'bb-king', name: 'B.B. King', genre: 'Blues' },
+      { id: 'chuck-berry', name: 'Chuck Berry', genre: 'Rock' },
+      { id: 'little-richard', name: 'Little Richard', genre: 'Rock' }
+    ],
+    influenced: [
+      { id: 'prince', name: 'Prince', genre: 'Pop' },
+      { id: 'eddie-van-halen', name: 'Eddie Van Halen', genre: 'Rock' },
+      { id: 'stevie-ray-vaughan', name: 'Stevie Ray Vaughan', genre: 'Blues' },
+      { id: 'kurt-cobain', name: 'Kurt Cobain', genre: 'Rock' }
+    ]
+  },
+  'chuck-berry': {
+    artist_id: 'chuck-berry',
+    name: 'Chuck Berry',
+    genre: 'Rock',
+    years: '1953–2017',
+    influenced_by: [
+      { id: 'muddy-waters', name: 'Muddy Waters', genre: 'Blues' }
+    ],
+    influenced: [
+      { id: 'jimi-hendrix', name: 'Jimi Hendrix', genre: 'Rock' },
+      { id: 'rolling-stones', name: 'The Rolling Stones', genre: 'Rock' },
+      { id: 'beatles', name: 'The Beatles', genre: 'Rock' }
+    ]
+  },
+  'little-richard': {
+    artist_id: 'little-richard',
+    name: 'Little Richard',
+    genre: 'Rock',
+    years: '1951–2020',
+    influenced_by: [],
+    influenced: [
+      { id: 'jimi-hendrix', name: 'Jimi Hendrix', genre: 'Rock' },
+      { id: 'prince', name: 'Prince', genre: 'Pop' },
+      { id: 'beatles', name: 'The Beatles', genre: 'Rock' },
+      { id: 'james-brown', name: 'James Brown', genre: 'Funk' }
+    ]
+  },
+  'eric-clapton': {
+    artist_id: 'eric-clapton',
+    name: 'Eric Clapton',
+    genre: 'Rock',
+    years: '1962–present',
+    influenced_by: [
+      { id: 'robert-johnson', name: 'Robert Johnson', genre: 'Blues' },
+      { id: 'muddy-waters', name: 'Muddy Waters', genre: 'Blues' },
+      { id: 'bb-king', name: 'B.B. King', genre: 'Blues' }
+    ],
+    influenced: [
+      { id: 'stevie-ray-vaughan', name: 'Stevie Ray Vaughan', genre: 'Blues' },
+      { id: 'john-mayer', name: 'John Mayer', genre: 'Rock' }
+    ]
+  },
+  'rolling-stones': {
+    artist_id: 'rolling-stones',
+    name: 'The Rolling Stones',
+    genre: 'Rock',
+    years: '1962–present',
+    influenced_by: [
+      { id: 'muddy-waters', name: 'Muddy Waters', genre: 'Blues' },
+      { id: 'chuck-berry', name: 'Chuck Berry', genre: 'Rock' }
+    ],
+    influenced: [
+      { id: 'led-zeppelin', name: 'Led Zeppelin', genre: 'Rock' },
+      { id: 'aerosmith', name: 'Aerosmith', genre: 'Rock' }
+    ]
+  },
+  'beatles': {
+    artist_id: 'beatles',
+    name: 'The Beatles',
+    genre: 'Rock',
+    years: '1960–1970',
+    influenced_by: [
+      { id: 'chuck-berry', name: 'Chuck Berry', genre: 'Rock' },
+      { id: 'little-richard', name: 'Little Richard', genre: 'Rock' }
+    ],
+    influenced: [
+      { id: 'led-zeppelin', name: 'Led Zeppelin', genre: 'Rock' },
+      { id: 'radiohead', name: 'Radiohead', genre: 'Rock' },
+      { id: 'david-bowie', name: 'David Bowie', genre: 'Rock' }
+    ]
+  },
+  'james-brown': {
+    artist_id: 'james-brown',
+    name: 'James Brown',
+    genre: 'Funk',
+    years: '1953–2006',
+    influenced_by: [
+      { id: 'little-richard', name: 'Little Richard', genre: 'Rock' }
+    ],
+    influenced: [
+      { id: 'prince', name: 'Prince', genre: 'Pop' },
+      { id: 'michael-jackson', name: 'Michael Jackson', genre: 'Pop' },
+      { id: 'grandmaster-flash', name: 'Grandmaster Flash', genre: 'Hip-Hop' }
+    ]
+  },
+  'prince': {
+    artist_id: 'prince',
+    name: 'Prince',
+    genre: 'Pop',
+    years: '1976–2016',
+    influenced_by: [
+      { id: 'jimi-hendrix', name: 'Jimi Hendrix', genre: 'Rock' },
+      { id: 'james-brown', name: 'James Brown', genre: 'Funk' },
+      { id: 'little-richard', name: 'Little Richard', genre: 'Rock' },
+      { id: 'stevie-wonder', name: 'Stevie Wonder', genre: 'Soul' }
+    ],
+    influenced: [
+      { id: 'beyonce', name: 'Beyoncé', genre: 'R&B' },
+      { id: 'the-weeknd', name: 'The Weeknd', genre: 'R&B' },
+      { id: 'janelle-monae', name: 'Janelle Monáe', genre: 'Pop' }
+    ]
+  },
+  'stevie-wonder': {
+    artist_id: 'stevie-wonder',
+    name: 'Stevie Wonder',
+    genre: 'Soul',
+    years: '1961–present',
+    influenced_by: [
+      { id: 'ray-charles', name: 'Ray Charles', genre: 'Soul' }
+    ],
+    influenced: [
+      { id: 'prince', name: 'Prince', genre: 'Pop' },
+      { id: 'michael-jackson', name: 'Michael Jackson', genre: 'Pop' },
+      { id: 'beyonce', name: 'Beyoncé', genre: 'R&B' }
+    ]
+  },
+  'ray-charles': {
+    artist_id: 'ray-charles',
+    name: 'Ray Charles',
+    genre: 'Soul',
+    years: '1947–2004',
+    influenced_by: [],
+    influenced: [
+      { id: 'stevie-wonder', name: 'Stevie Wonder', genre: 'Soul' },
+      { id: 'aretha-franklin', name: 'Aretha Franklin', genre: 'Soul' },
+      { id: 'james-brown', name: 'James Brown', genre: 'Funk' }
+    ]
+  },
+  'aretha-franklin': {
+    artist_id: 'aretha-franklin',
+    name: 'Aretha Franklin',
+    genre: 'Soul',
+    years: '1956–2018',
+    influenced_by: [
+      { id: 'ray-charles', name: 'Ray Charles', genre: 'Soul' }
+    ],
+    influenced: [
+      { id: 'beyonce', name: 'Beyoncé', genre: 'R&B' },
+      { id: 'whitney-houston', name: 'Whitney Houston', genre: 'Pop' }
+    ]
+  },
+  'michael-jackson': {
+    artist_id: 'michael-jackson',
+    name: 'Michael Jackson',
+    genre: 'Pop',
+    years: '1964–2009',
+    influenced_by: [
+      { id: 'james-brown', name: 'James Brown', genre: 'Funk' },
+      { id: 'stevie-wonder', name: 'Stevie Wonder', genre: 'Soul' }
+    ],
+    influenced: [
+      { id: 'beyonce', name: 'Beyoncé', genre: 'R&B' },
+      { id: 'the-weeknd', name: 'The Weeknd', genre: 'R&B' },
+      { id: 'justin-timberlake', name: 'Justin Timberlake', genre: 'Pop' }
+    ]
+  },
+  'led-zeppelin': {
+    artist_id: 'led-zeppelin',
+    name: 'Led Zeppelin',
+    genre: 'Rock',
+    years: '1968–1980',
+    influenced_by: [
+      { id: 'rolling-stones', name: 'The Rolling Stones', genre: 'Rock' },
+      { id: 'beatles', name: 'The Beatles', genre: 'Rock' }
+    ],
+    influenced: [
+      { id: 'eddie-van-halen', name: 'Eddie Van Halen', genre: 'Rock' },
+      { id: 'kurt-cobain', name: 'Kurt Cobain', genre: 'Rock' }
+    ]
+  },
+  'eddie-van-halen': {
+    artist_id: 'eddie-van-halen',
+    name: 'Eddie Van Halen',
+    genre: 'Rock',
+    years: '1972–2020',
+    influenced_by: [
+      { id: 'jimi-hendrix', name: 'Jimi Hendrix', genre: 'Rock' },
+      { id: 'led-zeppelin', name: 'Led Zeppelin', genre: 'Rock' }
+    ],
+    influenced: [
+      { id: 'tom-morello', name: 'Tom Morello', genre: 'Rock' }
+    ]
+  },
+  'stevie-ray-vaughan': {
+    artist_id: 'stevie-ray-vaughan',
+    name: 'Stevie Ray Vaughan',
+    genre: 'Blues',
+    years: '1971–1990',
+    influenced_by: [
+      { id: 'jimi-hendrix', name: 'Jimi Hendrix', genre: 'Rock' },
+      { id: 'bb-king', name: 'B.B. King', genre: 'Blues' },
+      { id: 'eric-clapton', name: 'Eric Clapton', genre: 'Rock' }
+    ],
+    influenced: [
+      { id: 'john-mayer', name: 'John Mayer', genre: 'Rock' }
+    ]
+  },
+  'kurt-cobain': {
+    artist_id: 'kurt-cobain',
+    name: 'Kurt Cobain',
+    genre: 'Rock',
+    years: '1987–1994',
+    influenced_by: [
+      { id: 'jimi-hendrix', name: 'Jimi Hendrix', genre: 'Rock' },
+      { id: 'led-zeppelin', name: 'Led Zeppelin', genre: 'Rock' }
+    ],
+    influenced: [
+      { id: 'radiohead', name: 'Radiohead', genre: 'Rock' }
+    ]
+  },
+  'david-bowie': {
+    artist_id: 'david-bowie',
+    name: 'David Bowie',
+    genre: 'Rock',
+    years: '1962–2016',
+    influenced_by: [
+      { id: 'beatles', name: 'The Beatles', genre: 'Rock' }
+    ],
+    influenced: [
+      { id: 'radiohead', name: 'Radiohead', genre: 'Rock' },
+      { id: 'the-weeknd', name: 'The Weeknd', genre: 'R&B' },
+      { id: 'janelle-monae', name: 'Janelle Monáe', genre: 'Pop' }
+    ]
+  },
+  'beyonce': {
+    artist_id: 'beyonce',
+    name: 'Beyoncé',
+    genre: 'R&B',
+    years: '1997–present',
+    influenced_by: [
+      { id: 'prince', name: 'Prince', genre: 'Pop' },
+      { id: 'michael-jackson', name: 'Michael Jackson', genre: 'Pop' },
+      { id: 'aretha-franklin', name: 'Aretha Franklin', genre: 'Soul' },
+      { id: 'stevie-wonder', name: 'Stevie Wonder', genre: 'Soul' }
+    ],
+    influenced: []
+  },
+  'the-weeknd': {
+    artist_id: 'the-weeknd',
+    name: 'The Weeknd',
+    genre: 'R&B',
+    years: '2010–present',
+    influenced_by: [
+      { id: 'michael-jackson', name: 'Michael Jackson', genre: 'Pop' },
+      { id: 'prince', name: 'Prince', genre: 'Pop' },
+      { id: 'david-bowie', name: 'David Bowie', genre: 'Rock' }
+    ],
+    influenced: []
+  },
+  'radiohead': {
+    artist_id: 'radiohead',
+    name: 'Radiohead',
+    genre: 'Rock',
+    years: '1985–present',
+    influenced_by: [
+      { id: 'beatles', name: 'The Beatles', genre: 'Rock' },
+      { id: 'david-bowie', name: 'David Bowie', genre: 'Rock' },
+      { id: 'kurt-cobain', name: 'Kurt Cobain', genre: 'Rock' }
+    ],
+    influenced: []
+  },
+  'grandmaster-flash': {
+    artist_id: 'grandmaster-flash',
+    name: 'Grandmaster Flash',
+    genre: 'Hip-Hop',
+    years: '1976–present',
+    influenced_by: [
+      { id: 'james-brown', name: 'James Brown', genre: 'Funk' }
+    ],
+    influenced: [
+      { id: 'run-dmc', name: 'Run-D.M.C.', genre: 'Hip-Hop' }
+    ]
+  },
+  'john-mayer': {
+    artist_id: 'john-mayer',
+    name: 'John Mayer',
+    genre: 'Rock',
+    years: '1998–present',
+    influenced_by: [
+      { id: 'stevie-ray-vaughan', name: 'Stevie Ray Vaughan', genre: 'Blues' },
+      { id: 'eric-clapton', name: 'Eric Clapton', genre: 'Rock' }
+    ],
+    influenced: []
+  },
+  // Additional stubs so links don't break
+  'whitney-houston': {
+    artist_id: 'whitney-houston', name: 'Whitney Houston', genre: 'Pop', years: '1977–2012',
+    influenced_by: [{ id: 'aretha-franklin', name: 'Aretha Franklin', genre: 'Soul' }],
+    influenced: [{ id: 'beyonce', name: 'Beyoncé', genre: 'R&B' }]
+  },
+  'aerosmith': {
+    artist_id: 'aerosmith', name: 'Aerosmith', genre: 'Rock', years: '1970–present',
+    influenced_by: [{ id: 'rolling-stones', name: 'The Rolling Stones', genre: 'Rock' }],
+    influenced: []
+  },
+  'tom-morello': {
+    artist_id: 'tom-morello', name: 'Tom Morello', genre: 'Rock', years: '1987–present',
+    influenced_by: [{ id: 'eddie-van-halen', name: 'Eddie Van Halen', genre: 'Rock' }],
+    influenced: []
+  },
+  'run-dmc': {
+    artist_id: 'run-dmc', name: 'Run-D.M.C.', genre: 'Hip-Hop', years: '1981–2002',
+    influenced_by: [{ id: 'grandmaster-flash', name: 'Grandmaster Flash', genre: 'Hip-Hop' }],
+    influenced: []
+  },
+  'justin-timberlake': {
+    artist_id: 'justin-timberlake', name: 'Justin Timberlake', genre: 'Pop', years: '1995–present',
+    influenced_by: [{ id: 'michael-jackson', name: 'Michael Jackson', genre: 'Pop' }],
+    influenced: []
+  },
+  'janelle-monae': {
+    artist_id: 'janelle-monae', name: 'Janelle Monáe', genre: 'Pop', years: '2003–present',
+    influenced_by: [{ id: 'prince', name: 'Prince', genre: 'Pop' }, { id: 'david-bowie', name: 'David Bowie', genre: 'Rock' }],
+    influenced: []
+  }
+};
+
+// ============================================================
+// App State
+// ============================================================
+let panelOpen = false;
+let navHistory = []; // breadcrumb path of artist IDs
+let currentArtistId = null;
+
+// ============================================================
+// Helpers
+// ============================================================
+function getGenreColor(genre) {
+  return GENRE_COLORS[genre] || '#8a8890';
+}
+
+function getInitials(name) {
+  return name.split(/[\s&]+/).filter(w => !['The','and','of'].includes(w)).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function getGenreCSSClass(genre) {
+  return genre.toLowerCase().replace(/[&\s]/g, '').replace('r&b','rnb');
+}
+
+// ============================================================
+// Render Artist Grid
+// ============================================================
+function renderGrid() {
+  const grid = document.getElementById('artistGrid');
+  const featured = ['robert-johnson','jimi-hendrix','prince','beatles','aretha-franklin','james-brown','stevie-wonder','beyonce','david-bowie','led-zeppelin','michael-jackson','grandmaster-flash'];
+
+  grid.innerHTML = featured.map(id => {
+    const a = artistsDB[id];
+    const color = getGenreColor(a.genre);
+    const totalConns = a.influenced_by.length + a.influenced.length;
+    return `
+      <div class="artist-trigger-card" data-artist="${id}" tabindex="0" role="button" aria-label="Explore influences of ${a.name}">
+        <div class="artist-trigger-card__header">
+          <div class="artist-trigger-card__avatar" style="background:${color}">${getInitials(a.name)}</div>
+          <div>
+            <div class="artist-trigger-card__name">${a.name}</div>
+            <div class="artist-trigger-card__years">${a.years}</div>
+          </div>
+        </div>
+        <div class="artist-trigger-card__genre">
+          <span class="genre-dot" style="background:${color}"></span>
+          ${a.genre}
+        </div>
+        <div class="artist-trigger-card__connections">
+          <span>${a.influenced_by.length} influence${a.influenced_by.length !== 1 ? 's' : ''}</span>
+          <span>·</span>
+          <span>${a.influenced.length} influenced</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  grid.querySelectorAll('.artist-trigger-card').forEach(card => {
+    card.addEventListener('click', () => openPanel(card.dataset.artist));
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel(card.dataset.artist); }
+    });
+  });
+}
+
+// ============================================================
+// Panel Open / Close
+// ============================================================
+function openPanel(artistId) {
+  navHistory = [artistId];
+  currentArtistId = artistId;
+  panelOpen = true;
+  document.getElementById('influencePanel').classList.add('open');
+  document.getElementById('panelBackdrop').classList.add('visible');
+  renderChain(artistId);
+}
+
+function closePanel() {
+  panelOpen = false;
+  navHistory = [];
+  currentArtistId = null;
+  document.getElementById('influencePanel').classList.remove('open');
+  document.getElementById('panelBackdrop').classList.remove('visible');
+}
+
+function navigateTo(artistId) {
+  if (!artistsDB[artistId]) return;
+  // Add to history if not already last
+  const idx = navHistory.indexOf(artistId);
+  if (idx >= 0) {
+    navHistory = navHistory.slice(0, idx + 1);
+  } else {
+    navHistory.push(artistId);
+  }
+  currentArtistId = artistId;
+  renderChain(artistId, true);
+}
+
+function goBack() {
+  if (navHistory.length <= 1) { closePanel(); return; }
+  navHistory.pop();
+  currentArtistId = navHistory[navHistory.length - 1];
+  renderChain(currentArtistId, true);
+}
+
+// ============================================================
+// Render Breadcrumb
+// ============================================================
+function renderBreadcrumb() {
+  const bc = document.getElementById('breadcrumb');
+  const backBtn = document.getElementById('backBtn');
+  backBtn.style.display = navHistory.length > 1 ? 'inline-flex' : 'none';
+
+  bc.innerHTML = navHistory.map((id, i) => {
+    const a = artistsDB[id];
+    const isLast = i === navHistory.length - 1;
+    const color = getGenreColor(a.genre);
+    let html = `<span class="breadcrumb__item ${isLast ? 'breadcrumb__item--active' : ''}" data-nav="${id}" style="${isLast ? `color:${color}` : ''}">
+      ${a.name}
+    </span>`;
+    if (!isLast) html += '<span class="breadcrumb__sep">→</span>';
+    return html;
+  }).join('');
+
+  bc.querySelectorAll('.breadcrumb__item').forEach(el => {
+    el.addEventListener('click', () => navigateTo(el.dataset.nav));
+  });
+
+  // Scroll breadcrumb to end
+  bc.scrollLeft = bc.scrollWidth;
+}
+
+// ============================================================
+// Render Chain View
+// ============================================================
+function renderChain(artistId, animated = false) {
+  const artist = artistsDB[artistId];
+  if (!artist) return;
+
+  renderBreadcrumb();
+
+  const container = document.getElementById('chainContainer');
+  const color = getGenreColor(artist.genre);
+  const animClass = animated ? 'animate-in' : '';
+
+  let html = '';
+
+  // Influenced By section (upstream)
+  html += `<div class="chain-section ${animClass}" ${animated ? 'style="animation-delay:0ms"' : ''}>
+    <div class="chain-section__label">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:inline;vertical-align:-1px;margin-right:4px"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      Influenced by <span class="connection-badge">${artist.influenced_by.length}</span>
+    </div>`;
+
+  if (artist.influenced_by.length === 0) {
+    html += `<div class="empty-state">
+      <div class="empty-state__icon">◇</div>
+      <div>Root artist — no recorded influences</div>
+    </div>`;
+  } else {
+    artist.influenced_by.forEach((inf, i) => {
+      const ic = getGenreColor(inf.genre);
+      const infArtist = artistsDB[inf.id];
+      const years = infArtist ? infArtist.years : '';
+      html += `<div class="influence-node influence-node--upstream ${animated ? 'animate-in-left' : ''}" data-nav="${inf.id}" tabindex="0" role="button" aria-label="Navigate to ${inf.name}" ${animated ? `style="animation-delay:${(i+1)*60}ms"` : ''}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${ic}" stroke-width="2" stroke-linecap="round" class="influence-node__arrow" style="transform:rotate(180deg)"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <div class="influence-node__avatar" style="background:${ic}">${getInitials(inf.name)}</div>
+        <div class="influence-node__info">
+          <div class="influence-node__name">${inf.name}</div>
+          <div class="influence-node__meta">
+            <span class="genre-dot" style="background:${ic}"></span>
+            <span>${inf.genre}</span>
+            ${years ? `<span style="color:var(--text-dim)">·</span><span>${years}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+    });
+  }
+  html += `</div>`;
+
+  // Center artist
+  html += `<div class="center-artist ${animClass}" ${animated ? 'style="animation-delay:80ms"' : ''}>
+    <div class="center-artist__inner" style="--accent:${color}">
+      <div class="center-artist__avatar" style="background:${color}">${getInitials(artist.name)}</div>
+      <div class="center-artist__info">
+        <div class="center-artist__name">${artist.name}</div>
+        <div class="center-artist__meta">
+          <span>${artist.years}</span>
+        </div>
+        <div class="center-artist__genre-tag" style="color:${color}">
+          <span class="genre-dot" style="background:${color}"></span>
+          ${artist.genre}
+        </div>
+      </div>
+    </div>
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${color};border-radius:var(--radius-lg) var(--radius-lg) 0 0"></div>
+  </div>`;
+
+  // Influenced section (downstream)
+  html += `<div class="chain-section ${animClass}" ${animated ? 'style="animation-delay:160ms"' : ''}>
+    <div class="chain-section__label">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:inline;vertical-align:-1px;margin-right:4px"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+      Influenced <span class="connection-badge">${artist.influenced.length}</span>
+    </div>`;
+
+  if (artist.influenced.length === 0) {
+    html += `<div class="empty-state">
+      <div class="empty-state__icon">◈</div>
+      <div>No recorded downstream influences yet</div>
+    </div>`;
+  } else {
+    artist.influenced.forEach((inf, i) => {
+      const ic = getGenreColor(inf.genre);
+      const infArtist = artistsDB[inf.id];
+      const years = infArtist ? infArtist.years : '';
+      html += `<div class="influence-node ${animated ? 'animate-in' : ''}" data-nav="${inf.id}" tabindex="0" role="button" aria-label="Navigate to ${inf.name}" ${animated ? `style="animation-delay:${(i+1)*60 + 180}ms"` : ''}>
+        <div class="influence-node__avatar" style="background:${ic}">${getInitials(inf.name)}</div>
+        <div class="influence-node__info">
+          <div class="influence-node__name">${inf.name}</div>
+          <div class="influence-node__meta">
+            <span class="genre-dot" style="background:${ic}"></span>
+            <span>${inf.genre}</span>
+            ${years ? `<span style="color:var(--text-dim)">·</span><span>${years}</span>` : ''}
+          </div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${ic}" stroke-width="2" stroke-linecap="round" class="influence-node__arrow"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </div>`;
+    });
+  }
+  html += `</div>`;
+
+  // Draw SVG connection lines
+  container.innerHTML = html;
+  requestAnimationFrame(() => drawConnections(artist, color));
+
+  // Attach click handlers
+  container.querySelectorAll('[data-nav]').forEach(el => {
+    el.addEventListener('click', () => navigateTo(el.dataset.nav));
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigateTo(el.dataset.nav); }
+    });
+  });
+
+  // Scroll to top
+  container.scrollTop = 0;
+}
+
+// ============================================================
+// Draw SVG Connection Lines
+// ============================================================
+function drawConnections(artist, centerColor) {
+  // Remove existing SVG overlay
+  const existing = document.querySelector('.connections-svg-overlay');
+  if (existing) existing.remove();
+
+  const container = document.getElementById('chainContainer');
+  const centerCard = container.querySelector('.center-artist');
+  if (!centerCard) return;
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.classList.add('connections-svg-overlay');
+  svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:0;';
+  container.style.position = 'relative';
+  container.insertBefore(svg, container.firstChild);
+
+  const cRect = centerCard.getBoundingClientRect();
+  const pRect = container.getBoundingClientRect();
+  const cMid = {
+    x: cRect.left - pRect.left + cRect.width / 2,
+    y: cRect.top - pRect.top + container.scrollTop
+  };
+
+  // Draw lines from upstream nodes to center
+  container.querySelectorAll('.influence-node--upstream').forEach(node => {
+    const nRect = node.getBoundingClientRect();
+    const nMid = {
+      x: nRect.left - pRect.left + nRect.width / 2,
+      y: nRect.top - pRect.top + container.scrollTop + nRect.height
+    };
+    const inf = artistsDB[node.dataset.nav];
+    const col = inf ? getGenreColor(inf.genre) : centerColor;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const dy = cMid.y - nMid.y;
+    const d = `M${nMid.x},${nMid.y} C${nMid.x},${nMid.y + dy * 0.5} ${cMid.x},${cMid.y - dy * 0.5} ${cMid.x},${cMid.y}`;
+    path.setAttribute('d', d);
+    path.setAttribute('stroke', col);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke-width', '1.5');
+    path.setAttribute('opacity', '0.2');
+    path.setAttribute('stroke-dasharray', '4,4');
+
+    // Animate in
+    const len = path.getTotalLength ? path.getTotalLength() : 200;
+    path.style.strokeDasharray = len;
+    path.style.strokeDashoffset = len;
+    path.style.transition = 'stroke-dash-offset 600ms var(--ease-out)';
+    svg.appendChild(path);
+    requestAnimationFrame(() => { path.style.strokeDashoffset = '0'; });
+  });
+
+  // Draw lines from center to downstream nodes
+  container.querySelectorAll('.influence-node:not(.influence-node--upstream)').forEach(node => {
+    if (!node.dataset.nav) return;
+    const nRect = node.getBoundingClientRect();
+    const nMid = {
+      x: nRect.left - pRect.left + nRect.width / 2,
+      y: nRect.top - pRect.top + container.scrollTop
+    };
+    const inf = artistsDB[node.dataset.nav];
+    const col = inf ? getGenreColor(inf.genre) : centerColor;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const dy = nMid.y - (cMid.y + cRect.height);
+    const startY = cMid.y + cRect.height;
+    const d = `M${cMid.x},${startY} C${cMid.x},${startY + dy * 0.5} ${nMid.x},${nMid.y - dy * 0.5} ${nMid.x},${nMid.y}`;
+    path.setAttribute('d', d);
+    path.setAttribute('stroke', col);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke-width', '1.5');
+    path.setAttribute('opacity', '0.2');
+    path.setAttribute('stroke-dasharray', '4,4');
+
+    const len = path.getTotalLength ? path.getTotalLength() : 200;
+    path.style.strokeDasharray = len;
+    path.style.strokeDashoffset = len;
+    path.style.transition = 'stroke-dash-offset 600ms var(--ease-out)';
+    svg.appendChild(path);
+    requestAnimationFrame(() => { path.style.strokeDashoffset = '0'; });
+  });
+}
+
+// ============================================================
+// Event Listeners
+// ============================================================
+document.getElementById('closeBtn').addEventListener('click', closePanel);
+document.getElementById('backBtn').addEventListener('click', goBack);
+document.getElementById('panelBackdrop').addEventListener('click', closePanel);
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+  if (!panelOpen) return;
+
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closePanel();
+  }
+
+  if (e.key === 'Backspace' && !e.target.closest('input,textarea')) {
+    e.preventDefault();
+    goBack();
+  }
+
+  // Arrow keys — cycle through influence nodes
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const nodes = Array.from(document.querySelectorAll('.influence-node'));
+    if (nodes.length === 0) return;
+    const focused = document.activeElement;
+    const idx = nodes.indexOf(focused);
+    let next;
+    if (e.key === 'ArrowDown') {
+      next = idx < nodes.length - 1 ? idx + 1 : 0;
+    } else {
+      next = idx > 0 ? idx - 1 : nodes.length - 1;
+    }
+    nodes[next].focus();
+  }
+
+  // Left/Right — navigate to first upstream/downstream
+  if (e.key === 'ArrowLeft' && currentArtistId) {
+    const artist = artistsDB[currentArtistId];
+    if (artist && artist.influenced_by.length > 0) {
+      navigateTo(artist.influenced_by[0].id);
+    }
+  }
+  if (e.key === 'ArrowRight' && currentArtistId) {
+    const artist = artistsDB[currentArtistId];
+    if (artist && artist.influenced.length > 0) {
+      navigateTo(artist.influenced[0].id);
+    }
+  }
+});
+
+// ============================================================
+// Init
+// ============================================================
+renderGrid();
+</script>
+</body>
+</html>

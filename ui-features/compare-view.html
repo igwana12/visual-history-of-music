@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+   ______                            __
+  / ____/___  ____ ___  ____  __  __/ /____  _____
+ / /   / __ \/ __ `__ \/ __ \/ / / / __/ _ \/ ___/
+/ /___/ /_/ / / / / / / /_/ / /_/ / /_/  __/ /
+\____/\____/_/ /_/ /_/ .___/\__,_/\__/\___/_/
+                    /_/
+        Created with Perplexity Computer
+        https://www.perplexity.ai/computer
+-->
+
+<!-- Perplexity Computer Attribution — SEO Meta Tags -->
+<meta name="generator" content="Perplexity Computer">
+<meta name="author" content="Perplexity Computer">
+<meta property="og:see_also" content="https://www.perplexity.ai/computer">
+<link rel="author" href="https://www.perplexity.ai/computer">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compare View — Visual History of Music</title>
+<link rel="stylesheet" href="shared-styles.css">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<style>
+/* ===== Selection Screen ===== */
+.selection-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-8) var(--space-4);
+}
+
+.selection-screen__title {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: var(--space-2);
+}
+
+.selection-screen__subtitle {
+  font-size: var(--text-md);
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 540px;
+  margin-bottom: var(--space-6);
+}
+
+/* Selected preview strip */
+.selection-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+  min-height: 64px;
+}
+
+.selection-slot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  background: var(--bg-surface);
+  border: 2px dashed var(--border-medium);
+  border-radius: var(--radius-lg);
+  min-width: 200px;
+  min-height: 56px;
+  transition: all var(--transition-base);
+}
+
+.selection-slot--filled {
+  border-style: solid;
+  border-color: var(--border-strong);
+}
+
+.selection-slot__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--bg-root);
+}
+
+.selection-slot__name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-base);
+}
+
+.selection-slot__placeholder {
+  color: var(--text-dim);
+  font-size: var(--text-sm);
+}
+
+.selection-vs {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--text-dim);
+  font-weight: 700;
+  font-style: italic;
+}
+
+.compare-btn {
+  padding: var(--space-3) var(--space-8);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  font-weight: 600;
+  background: var(--genre-rock);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  opacity: 0.4;
+  pointer-events: none;
+  margin-bottom: var(--space-8);
+}
+
+.compare-btn--active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.compare-btn--active:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(217, 68, 82, 0.4);
+}
+
+.compare-btn--active:active {
+  transform: translateY(0);
+}
+
+/* Artist selection grid */
+.select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 1000px;
+}
+
+.select-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.select-card:hover {
+  background: var(--bg-surface-raised);
+  border-color: var(--border-medium);
+  transform: translateY(-1px);
+}
+
+.select-card--selected {
+  border-color: var(--border-strong);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-md);
+}
+
+.select-card__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--bg-root);
+  flex-shrink: 0;
+}
+
+.select-card__name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.select-card__genre {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* ===== Compare View ===== */
+.compare-screen {
+  display: none;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.compare-screen.active {
+  display: flex;
+}
+
+.compare-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.compare-header__title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.compare-header__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Split Layout */
+.compare-split {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.compare-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+
+.compare-side--left {
+  border-right: 1px solid var(--border-subtle);
+}
+
+/* Central timeline ruler */
+.compare-ruler {
+  width: 60px;
+  flex-shrink: 0;
+  position: relative;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-subtle);
+}
+
+.ruler-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Artist Header in Compare */
+.compare-artist-header {
+  text-align: center;
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.compare-artist-header__avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--bg-root);
+  margin: 0 auto var(--space-4);
+  box-shadow: 0 0 0 3px var(--bg-root), 0 0 0 5px var(--border-medium);
+}
+
+.compare-artist-header__name {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.compare-artist-header__meta {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.compare-artist-header__genre-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 3px var(--space-3);
+  background: rgba(255,255,255,0.05);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  margin-top: var(--space-2);
+}
+
+.compare-artist-header__nationality {
+  font-size: var(--text-xs);
+  color: var(--text-dim);
+  margin-top: var(--space-1);
+}
+
+/* Section labels */
+.compare-section {
+  margin-bottom: var(--space-6);
+}
+
+.compare-section__label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Timeline entries */
+.timeline {
+  position: relative;
+  padding-left: var(--space-5);
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--border-medium);
+}
+
+.timeline-item {
+  position: relative;
+  padding-bottom: var(--space-4);
+  padding-left: var(--space-3);
+}
+
+.timeline-item__dot {
+  position: absolute;
+  left: calc(-1 * var(--space-5) + 2px);
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  border: 2px solid;
+  background: var(--bg-root);
+}
+
+.timeline-item__year {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-item__title {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.timeline-item__type {
+  font-size: var(--text-xs);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Influence list */
+.influence-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.influence-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.influence-chip--common {
+  border-color: var(--genre-jazz);
+  background: rgba(212, 168, 67, 0.08);
+}
+
+.influence-chip--common::after {
+  content: '★';
+  color: var(--genre-jazz);
+  font-size: 10px;
+  margin-left: var(--space-1);
+}
+
+/* Awards */
+.award-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.award-item__icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.award-item__text {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.award-item__year {
+  font-size: var(--text-xs);
+  color: var(--text-dim);
+  margin-top: 1px;
+}
+
+/* Overlap highlight */
+.overlap-banner {
+  text-align: center;
+  padding: var(--space-3) var(--space-4);
+  background: rgba(212, 168, 67, 0.08);
+  border: 1px solid rgba(212, 168, 67, 0.2);
+  border-radius: var(--radius-md);
+  margin: var(--space-4) var(--space-6);
+  font-size: var(--text-sm);
+  color: var(--genre-jazz);
+}
+
+/* Common connections SVG overlay */
+.compare-connections-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Animations */
+@keyframes compareSlideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes compareSlideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.compare-side--left .compare-artist-header,
+.compare-side--left .compare-section {
+  animation: compareSlideInLeft 500ms var(--ease-out) both;
+}
+
+.compare-side--right .compare-artist-header,
+.compare-side--right .compare-section {
+  animation: compareSlideInRight 500ms var(--ease-out) both;
+}
+
+.compare-side .compare-section:nth-child(2) { animation-delay: 80ms; }
+.compare-side .compare-section:nth-child(3) { animation-delay: 160ms; }
+.compare-side .compare-section:nth-child(4) { animation-delay: 240ms; }
+.compare-side .compare-section:nth-child(5) { animation-delay: 320ms; }
+
+/* ===== Mobile ===== */
+@media (max-width: 768px) {
+  .selection-screen {
+    padding: var(--space-4);
+  }
+
+  .selection-screen__title {
+    font-size: var(--text-2xl);
+  }
+
+  .selection-preview {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .select-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .compare-split {
+    flex-direction: column;
+  }
+
+  .compare-side--left {
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .compare-ruler {
+    display: none;
+  }
+
+  .compare-side {
+    padding: var(--space-4);
+  }
+
+  .compare-header {
+    padding: var(--space-3) var(--space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .select-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Ruler year labels */
+.ruler-year {
+  font-family: var(--font-body);
+  font-size: 9px;
+  fill: var(--text-dim);
+  text-anchor: middle;
+  font-variant-numeric: tabular-nums;
+}
+
+.ruler-line {
+  stroke: var(--border-medium);
+  stroke-width: 1;
+}
+
+.ruler-overlap {
+  fill: rgba(212, 168, 67, 0.06);
+}
+
+/* Stats row */
+.stats-row {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.stat-box {
+  flex: 1;
+  text-align: center;
+  padding: var(--space-3);
+  background: var(--bg-surface-raised);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.stat-box__value {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.stat-box__label {
+  font-size: var(--text-xs);
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+</style>
+</head>
+<body>
+
+<!-- ===== Selection Screen ===== -->
+<div class="selection-screen" id="selectionScreen">
+  <h1 class="selection-screen__title">Compare Artists</h1>
+  <p class="selection-screen__subtitle">Select two artists to compare their timelines, influences, and achievements side by side.</p>
+
+  <div class="selection-preview" id="selectionPreview">
+    <div class="selection-slot" id="slot1">
+      <span class="selection-slot__placeholder">Select first artist</span>
+    </div>
+    <span class="selection-vs">vs</span>
+    <div class="selection-slot" id="slot2">
+      <span class="selection-slot__placeholder">Select second artist</span>
+    </div>
+  </div>
+
+  <button class="compare-btn" id="compareBtn">Compare Artists</button>
+
+  <div class="select-grid" id="selectGrid"></div>
+</div>
+
+<!-- ===== Compare Screen ===== -->
+<div class="compare-screen" id="compareScreen">
+  <div class="compare-header">
+    <div class="compare-header__title" id="compareTitle">Artist Comparison</div>
+    <div class="compare-header__actions">
+      <button class="vhm-btn" id="swapBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 16V4m0 12l-3-3m3 3l3-3M17 8v12m0-12l3 3m-3-3l-3 3"/></svg>
+        Swap
+      </button>
+      <button class="vhm-btn" id="backToSelectBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        New Comparison
+      </button>
+    </div>
+  </div>
+
+  <div id="overlapBanner"></div>
+
+  <div class="compare-split" id="compareSplit">
+    <div class="compare-side compare-side--left" id="sideLeft"></div>
+    <div class="compare-ruler" id="compareRuler"></div>
+    <div class="compare-side compare-side--right" id="sideRight"></div>
+  </div>
+</div>
+
+<footer class="vhm-footer">
+  Visual History of Music — Compare View Demo &middot;
+  <a href="https://www.perplexity.ai/computer" target="_blank" rel="noopener noreferrer">Created with Perplexity Computer</a>
+</footer>
+
+<script>
+// ============================================================
+// Genre Colors
+// ============================================================
+const GENRE_COLORS = {
+  'Blues': '#4a90d9', 'Jazz': '#d4a843', 'Country': '#c17a3a',
+  'Rock': '#d94452', 'Soul': '#3ab5a5', 'Electronic': '#5dd477',
+  'Hip-Hop': '#9b59b6', 'Pop': '#e87ecf', 'Punk': '#e8a62e',
+  'Metal': '#8c8c8c', 'R&B': '#e06070', 'Folk': '#a8c060',
+  'Funk': '#f0a040', 'Reggae': '#40b060', 'Classical': '#c0a0d0'
+};
+
+function getGenreColor(g) { return GENRE_COLORS[g] || '#8a8890'; }
+function getInitials(name) {
+  return name.split(/[\s&]+/).filter(w => !['The','and','of'].includes(w)).map(w => w[0]).join('').slice(0,2).toUpperCase();
+}
+
+// ============================================================
+// Artist Compare Data — 20+ artists with full profiles
+// ============================================================
+const compareData = {
+  'jimi-hendrix': {
+    artist: { name: 'Jimi Hendrix', genre: 'Rock', years: '1963–1970', nationality: 'American', startYear: 1963, endYear: 1970 },
+    performances: [
+      { title: 'Are You Experienced', year: 1967, genre: 'Rock', type: 'Album' },
+      { title: 'Monterey Pop Festival', year: 1967, genre: 'Rock', type: 'Live' },
+      { title: 'Axis: Bold as Love', year: 1967, genre: 'Rock', type: 'Album' },
+      { title: 'Electric Ladyland', year: 1968, genre: 'Rock', type: 'Album' },
+      { title: 'Woodstock Festival', year: 1969, genre: 'Rock', type: 'Live' },
+      { title: 'Band of Gypsys', year: 1970, genre: 'Rock', type: 'Album' }
+    ],
+    influences: {
+      by: ['Muddy Waters', 'B.B. King', 'Chuck Berry', 'Little Richard', 'Bob Dylan'],
+      on: ['Prince', 'Eddie Van Halen', 'Stevie Ray Vaughan', 'Kurt Cobain', 'John Frusciante']
+    },
+    awards: [
+      { title: 'Rock & Roll Hall of Fame', year: 1992 },
+      { title: 'Grammy Lifetime Achievement', year: 1992 },
+      { title: 'UK Music Hall of Fame', year: 2005 },
+      { title: 'Rolling Stone #1 Guitarist', year: 2003 }
+    ]
+  },
+  'prince': {
+    artist: { name: 'Prince', genre: 'Pop', years: '1976–2016', nationality: 'American', startYear: 1976, endYear: 2016 },
+    performances: [
+      { title: 'Dirty Mind', year: 1980, genre: 'Funk', type: 'Album' },
+      { title: '1999', year: 1982, genre: 'Pop', type: 'Album' },
+      { title: 'Purple Rain', year: 1984, genre: 'Pop', type: 'Album' },
+      { title: 'Sign o\' the Times', year: 1987, genre: 'Funk', type: 'Album' },
+      { title: 'Super Bowl XLI Halftime', year: 2007, genre: 'Pop', type: 'Live' },
+      { title: 'Musicology', year: 2004, genre: 'Funk', type: 'Album' }
+    ],
+    influences: {
+      by: ['Jimi Hendrix', 'James Brown', 'Stevie Wonder', 'Little Richard', 'Sly Stone'],
+      on: ['Beyoncé', 'The Weeknd', 'Janelle Monáe', 'D\'Angelo', 'Bruno Mars']
+    },
+    awards: [
+      { title: 'Academy Award (Purple Rain)', year: 1985 },
+      { title: 'Rock & Roll Hall of Fame', year: 2004 },
+      { title: '7× Grammy Awards', year: 2004 },
+      { title: 'BET Lifetime Achievement', year: 2010 }
+    ]
+  },
+  'beatles': {
+    artist: { name: 'The Beatles', genre: 'Rock', years: '1960–1970', nationality: 'British', startYear: 1960, endYear: 1970 },
+    performances: [
+      { title: 'Please Please Me', year: 1963, genre: 'Rock', type: 'Album' },
+      { title: 'A Hard Day\'s Night', year: 1964, genre: 'Rock', type: 'Album' },
+      { title: 'Rubber Soul', year: 1965, genre: 'Rock', type: 'Album' },
+      { title: 'Revolver', year: 1966, genre: 'Rock', type: 'Album' },
+      { title: 'Sgt. Pepper\'s Lonely Hearts Club Band', year: 1967, genre: 'Rock', type: 'Album' },
+      { title: 'Abbey Road', year: 1969, genre: 'Rock', type: 'Album' },
+      { title: 'Let It Be', year: 1970, genre: 'Rock', type: 'Album' }
+    ],
+    influences: {
+      by: ['Chuck Berry', 'Little Richard', 'Elvis Presley', 'Buddy Holly'],
+      on: ['Led Zeppelin', 'Radiohead', 'Oasis', 'David Bowie', 'Pink Floyd']
+    },
+    awards: [
+      { title: 'Rock & Roll Hall of Fame', year: 1988 },
+      { title: '7× Grammy Awards', year: 1970 },
+      { title: 'MBE from Queen Elizabeth', year: 1965 },
+      { title: 'Rolling Stone #1 Artist', year: 2004 }
+    ]
+  },
+  'beyonce': {
+    artist: { name: 'Beyoncé', genre: 'R&B', years: '1997–present', nationality: 'American', startYear: 1997, endYear: 2026 },
+    performances: [
+      { title: 'Dangerously in Love', year: 2003, genre: 'R&B', type: 'Album' },
+      { title: 'B\'Day', year: 2006, genre: 'R&B', type: 'Album' },
+      { title: 'Lemonade', year: 2016, genre: 'R&B', type: 'Album' },
+      { title: 'Coachella (Beychella)', year: 2018, genre: 'R&B', type: 'Live' },
+      { title: 'Renaissance', year: 2022, genre: 'Pop', type: 'Album' },
+      { title: 'Cowboy Carter', year: 2024, genre: 'Country', type: 'Album' }
+    ],
+    influences: {
+      by: ['Michael Jackson', 'Prince', 'Aretha Franklin', 'Diana Ross', 'Stevie Wonder'],
+      on: ['Lizzo', 'Doja Cat', 'Normani', 'Chloe Bailey'],
+    },
+    awards: [
+      { title: '32× Grammy Awards', year: 2023 },
+      { title: 'Peabody Award', year: 2020 },
+      { title: 'BET Award for Video of Year', year: 2016 },
+      { title: 'Most Grammy wins ever', year: 2023 }
+    ]
+  },
+  'michael-jackson': {
+    artist: { name: 'Michael Jackson', genre: 'Pop', years: '1964–2009', nationality: 'American', startYear: 1964, endYear: 2009 },
+    performances: [
+      { title: 'Off the Wall', year: 1979, genre: 'Pop', type: 'Album' },
+      { title: 'Thriller', year: 1982, genre: 'Pop', type: 'Album' },
+      { title: 'Motown 25 (Moonwalk debut)', year: 1983, genre: 'Pop', type: 'Live' },
+      { title: 'Bad', year: 1987, genre: 'Pop', type: 'Album' },
+      { title: 'Dangerous', year: 1991, genre: 'Pop', type: 'Album' },
+      { title: 'HIStory World Tour', year: 1997, genre: 'Pop', type: 'Live' }
+    ],
+    influences: {
+      by: ['James Brown', 'Stevie Wonder', 'Diana Ross', 'Jackie Wilson'],
+      on: ['Justin Timberlake', 'Beyoncé', 'Usher', 'Chris Brown', 'The Weeknd']
+    },
+    awards: [
+      { title: '13× Grammy Awards', year: 1984 },
+      { title: 'Rock & Roll Hall of Fame (2×)', year: 2001 },
+      { title: 'Thriller: Best-selling album ever', year: 1984 },
+      { title: 'World Music Awards Legend', year: 2006 }
+    ]
+  },
+  'david-bowie': {
+    artist: { name: 'David Bowie', genre: 'Rock', years: '1962–2016', nationality: 'British', startYear: 1962, endYear: 2016 },
+    performances: [
+      { title: 'The Rise and Fall of Ziggy Stardust', year: 1972, genre: 'Rock', type: 'Album' },
+      { title: 'Station to Station', year: 1976, genre: 'Rock', type: 'Album' },
+      { title: '"Heroes"', year: 1977, genre: 'Electronic', type: 'Album' },
+      { title: 'Let\'s Dance', year: 1983, genre: 'Pop', type: 'Album' },
+      { title: 'Blackstar', year: 2016, genre: 'Rock', type: 'Album' }
+    ],
+    influences: {
+      by: ['The Beatles', 'Little Richard', 'The Velvet Underground', 'Jacques Brel'],
+      on: ['Radiohead', 'The Cure', 'Nine Inch Nails', 'Lady Gaga', 'The Weeknd']
+    },
+    awards: [
+      { title: 'Rock & Roll Hall of Fame', year: 1996 },
+      { title: '5× Grammy Awards', year: 2016 },
+      { title: 'Brit Award for Innovation', year: 1996 },
+      { title: 'UK Music Hall of Fame', year: 2006 }
+    ]
+  },
+  'aretha-franklin': {
+    artist: { name: 'Aretha Franklin', genre: 'Soul', years: '1956–2018', nationality: 'American', startYear: 1956, endYear: 2018 },
+    performances: [
+      { title: 'I Never Loved a Man the Way I Love You', year: 1967, genre: 'Soul', type: 'Album' },
+      { title: 'Lady Soul', year: 1968, genre: 'Soul', type: 'Album' },
+      { title: 'Amazing Grace', year: 1972, genre: 'Soul', type: 'Album' },
+      { title: 'Who\'s Zoomin\' Who?', year: 1985, genre: 'Pop', type: 'Album' },
+      { title: 'Obama Inauguration', year: 2009, genre: 'Soul', type: 'Live' }
+    ],
+    influences: {
+      by: ['Ray Charles', 'Sam Cooke', 'Clara Ward', 'Mahalia Jackson'],
+      on: ['Whitney Houston', 'Beyoncé', 'Alicia Keys', 'Adele', 'Mary J. Blige']
+    },
+    awards: [
+      { title: '18× Grammy Awards', year: 2008 },
+      { title: 'Presidential Medal of Freedom', year: 2005 },
+      { title: 'Rock & Roll Hall of Fame (1st woman)', year: 1987 },
+      { title: 'Rolling Stone #1 Singer', year: 2008 }
+    ]
+  },
+  'stevie-wonder': {
+    artist: { name: 'Stevie Wonder', genre: 'Soul', years: '1961–present', nationality: 'American', startYear: 1961, endYear: 2026 },
+    performances: [
+      { title: 'Talking Book', year: 1972, genre: 'Soul', type: 'Album' },
+      { title: 'Innervisions', year: 1973, genre: 'Soul', type: 'Album' },
+      { title: 'Songs in the Key of Life', year: 1976, genre: 'Soul', type: 'Album' },
+      { title: 'Hotter than July', year: 1980, genre: 'Soul', type: 'Album' },
+      { title: 'We Are the World (co-write)', year: 1985, genre: 'Pop', type: 'Single' }
+    ],
+    influences: {
+      by: ['Ray Charles', 'Sam Cooke', 'The Beatles', 'Marvin Gaye'],
+      on: ['Prince', 'Michael Jackson', 'Beyoncé', 'John Legend', 'Alicia Keys']
+    },
+    awards: [
+      { title: '25× Grammy Awards', year: 2005 },
+      { title: 'Presidential Medal of Freedom', year: 2014 },
+      { title: 'Rock & Roll Hall of Fame', year: 1989 },
+      { title: 'UN Messenger of Peace', year: 2009 }
+    ]
+  },
+  'james-brown': {
+    artist: { name: 'James Brown', genre: 'Funk', years: '1953–2006', nationality: 'American', startYear: 1953, endYear: 2006 },
+    performances: [
+      { title: 'Live at the Apollo', year: 1963, genre: 'Soul', type: 'Album' },
+      { title: 'Papa\'s Got a Brand New Bag', year: 1965, genre: 'Funk', type: 'Single' },
+      { title: 'I Got You (I Feel Good)', year: 1965, genre: 'Funk', type: 'Single' },
+      { title: 'Sex Machine', year: 1970, genre: 'Funk', type: 'Single' },
+      { title: 'The Payback', year: 1974, genre: 'Funk', type: 'Album' }
+    ],
+    influences: {
+      by: ['Little Richard', 'Louis Jordan', 'Ray Charles'],
+      on: ['Prince', 'Michael Jackson', 'Grandmaster Flash', 'Afrika Bambaataa', 'Fela Kuti']
+    },
+    awards: [
+      { title: 'Rock & Roll Hall of Fame', year: 1986 },
+      { title: 'Grammy Lifetime Achievement', year: 1992 },
+      { title: 'Godfather of Soul title', year: 1965 },
+      { title: 'Rolling Stone #7 Artist', year: 2004 }
+    ]
+  },
+  'led-zeppelin': {
+    artist: { name: 'Led Zeppelin', genre: 'Rock', years: '1968–1980', nationality: 'British', startYear: 1968, endYear: 1980 },
+    performances: [
+      { title: 'Led Zeppelin I', year: 1969, genre: 'Rock', type: 'Album' },
+      { title: 'Led Zeppelin II', year: 1969, genre: 'Rock', type: 'Album' },
+      { title: 'Led Zeppelin IV', year: 1971, genre: 'Rock', type: 'Album' },
+      { title: 'Houses of the Holy', year: 1973, genre: 'Rock', type: 'Album' },
+      { title: 'Physical Graffiti', year: 1975, genre: 'Rock', type: 'Album' }
+    ],
+    influences: {
+      by: ['The Rolling Stones', 'The Beatles', 'Muddy Waters', 'Howlin\' Wolf'],
+      on: ['Guns N\' Roses', 'Nirvana', 'Pearl Jam', 'Soundgarden', 'Tool']
+    },
+    awards: [
+      { title: 'Rock & Roll Hall of Fame', year: 1995 },
+      { title: 'Grammy Lifetime Achievement', year: 2005 },
+      { title: 'UK Music Hall of Fame', year: 2006 },
+      { title: 'Kennedy Center Honors', year: 2012 }
+    ]
+  },
+  'ray-charles': {
+    artist: { name: 'Ray Charles', genre: 'Soul', years: '1947–2004', nationality: 'American', startYear: 1947, endYear: 2004 },
+    performances: [
+      { title: 'I Got a Woman', year: 1954, genre: 'Soul', type: 'Single' },
+      { title: 'What\'d I Say', year: 1959, genre: 'Soul', type: 'Single' },
+      { title: 'Modern Sounds in Country', year: 1962, genre: 'Country', type: 'Album' },
+      { title: 'Georgia On My Mind', year: 1960, genre: 'Soul', type: 'Single' },
+      { title: 'Genius Loves Company', year: 2004, genre: 'Soul', type: 'Album' }
+    ],
+    influences: {
+      by: ['Nat King Cole', 'Charles Brown', 'Art Tatum'],
+      on: ['Stevie Wonder', 'Aretha Franklin', 'James Brown', 'Billy Joel', 'Van Morrison']
+    },
+    awards: [
+      { title: '17× Grammy Awards', year: 2005 },
+      { title: 'Rock & Roll Hall of Fame', year: 1986 },
+      { title: 'Kennedy Center Honors', year: 1986 },
+      { title: 'Presidential Medal of Arts', year: 1993 }
+    ]
+  },
+  'radiohead': {
+    artist: { name: 'Radiohead', genre: 'Rock', years: '1985–present', nationality: 'British', startYear: 1985, endYear: 2026 },
+    performances: [
+      { title: 'The Bends', year: 1995, genre: 'Rock', type: 'Album' },
+      { title: 'OK Computer', year: 1997, genre: 'Rock', type: 'Album' },
+      { title: 'Kid A', year: 2000, genre: 'Electronic', type: 'Album' },
+      { title: 'In Rainbows', year: 2007, genre: 'Rock', type: 'Album' },
+      { title: 'A Moon Shaped Pool', year: 2016, genre: 'Rock', type: 'Album' }
+    ],
+    influences: {
+      by: ['The Beatles', 'David Bowie', 'R.E.M.', 'Talking Heads', 'Miles Davis'],
+      on: ['Muse', 'Coldplay', 'Arcade Fire', 'Everything Everything']
+    },
+    awards: [
+      { title: '3× Grammy Awards', year: 2009 },
+      { title: 'Rock & Roll Hall of Fame', year: 2019 },
+      { title: 'OK Computer: Greatest album polls', year: 1997 },
+      { title: 'Mercury Prize nomination', year: 1997 }
+    ]
+  },
+  'muddy-waters': {
+    artist: { name: 'Muddy Waters', genre: 'Blues', years: '1941–1983', nationality: 'American', startYear: 1941, endYear: 1983 },
+    performances: [
+      { title: 'Rollin\' Stone', year: 1950, genre: 'Blues', type: 'Single' },
+      { title: 'Hoochie Coochie Man', year: 1954, genre: 'Blues', type: 'Single' },
+      { title: 'At Newport 1960', year: 1960, genre: 'Blues', type: 'Album' },
+      { title: 'Hard Again', year: 1977, genre: 'Blues', type: 'Album' }
+    ],
+    influences: {
+      by: ['Robert Johnson', 'Son House', 'Big Bill Broonzy'],
+      on: ['Jimi Hendrix', 'The Rolling Stones', 'Eric Clapton', 'Led Zeppelin']
+    },
+    awards: [
+      { title: '6× Grammy Awards', year: 1978 },
+      { title: 'Rock & Roll Hall of Fame', year: 1987 },
+      { title: 'Blues Foundation Hall of Fame', year: 1980 },
+      { title: 'Rolling Stone #17 Artist', year: 2004 }
+    ]
+  },
+  'robert-johnson': {
+    artist: { name: 'Robert Johnson', genre: 'Blues', years: '1936–1938', nationality: 'American', startYear: 1936, endYear: 1938 },
+    performances: [
+      { title: 'Cross Road Blues', year: 1936, genre: 'Blues', type: 'Single' },
+      { title: 'Sweet Home Chicago', year: 1936, genre: 'Blues', type: 'Single' },
+      { title: 'Love in Vain', year: 1937, genre: 'Blues', type: 'Single' },
+      { title: 'Hellhound on My Trail', year: 1937, genre: 'Blues', type: 'Single' }
+    ],
+    influences: {
+      by: ['Son House', 'Charlie Patton', 'Lonnie Johnson'],
+      on: ['Muddy Waters', 'B.B. King', 'Eric Clapton', 'Keith Richards']
+    },
+    awards: [
+      { title: 'Rock & Roll Hall of Fame (Early Influence)', year: 1986 },
+      { title: 'Grammy Hall of Fame', year: 1998 },
+      { title: 'US postage stamp', year: 1994 }
+    ]
+  },
+  'the-weeknd': {
+    artist: { name: 'The Weeknd', genre: 'R&B', years: '2010–present', nationality: 'Canadian', startYear: 2010, endYear: 2026 },
+    performances: [
+      { title: 'House of Balloons', year: 2011, genre: 'R&B', type: 'Mixtape' },
+      { title: 'Beauty Behind the Madness', year: 2015, genre: 'Pop', type: 'Album' },
+      { title: 'Starboy', year: 2016, genre: 'Pop', type: 'Album' },
+      { title: 'After Hours', year: 2020, genre: 'R&B', type: 'Album' },
+      { title: 'Super Bowl LV Halftime', year: 2021, genre: 'Pop', type: 'Live' },
+      { title: 'Dawn FM', year: 2022, genre: 'Pop', type: 'Album' }
+    ],
+    influences: {
+      by: ['Michael Jackson', 'Prince', 'David Bowie', 'R. Kelly', 'Sade'],
+      on: ['Doja Cat', '6LACK', 'Brent Faiyaz']
+    },
+    awards: [
+      { title: '4× Grammy Awards', year: 2021 },
+      { title: 'Guinness: Most Spotify listeners', year: 2023 },
+      { title: 'Juno Award (multiple)', year: 2021 },
+      { title: 'AMA Award for Favorite R&B', year: 2021 }
+    ]
+  },
+  'grandmaster-flash': {
+    artist: { name: 'Grandmaster Flash', genre: 'Hip-Hop', years: '1976–present', nationality: 'Barbadian-American', startYear: 1976, endYear: 2026 },
+    performances: [
+      { title: 'The Adventures of Grandmaster Flash on the Wheels of Steel', year: 1981, genre: 'Hip-Hop', type: 'Single' },
+      { title: 'The Message', year: 1982, genre: 'Hip-Hop', type: 'Single' },
+      { title: 'White Lines (Don\'t Don\'t Do It)', year: 1983, genre: 'Hip-Hop', type: 'Single' }
+    ],
+    influences: {
+      by: ['James Brown', 'Kool Herc', 'Pete DJ Jones'],
+      on: ['Run-D.M.C.', 'Public Enemy', 'DJ Premier', 'A Tribe Called Quest']
+    },
+    awards: [
+      { title: 'Rock & Roll Hall of Fame (1st hip-hop act)', year: 2007 },
+      { title: 'Grammy Lifetime Achievement', year: 2024 },
+      { title: 'BET Hip-Hop Award', year: 2007 }
+    ]
+  },
+  'bb-king': {
+    artist: { name: 'B.B. King', genre: 'Blues', years: '1947–2015', nationality: 'American', startYear: 1947, endYear: 2015 },
+    performances: [
+      { title: '3 O\'Clock Blues', year: 1951, genre: 'Blues', type: 'Single' },
+      { title: 'Live at the Regal', year: 1965, genre: 'Blues', type: 'Album' },
+      { title: 'The Thrill Is Gone', year: 1969, genre: 'Blues', type: 'Single' },
+      { title: 'Live at Cook County Jail', year: 1971, genre: 'Blues', type: 'Album' },
+      { title: 'Riding with the King (w/ Clapton)', year: 2000, genre: 'Blues', type: 'Album' }
+    ],
+    influences: {
+      by: ['Robert Johnson', 'T-Bone Walker', 'Lonnie Johnson', 'Django Reinhardt'],
+      on: ['Jimi Hendrix', 'Eric Clapton', 'Stevie Ray Vaughan', 'John Mayer', 'Gary Clark Jr.']
+    },
+    awards: [
+      { title: '15× Grammy Awards', year: 2009 },
+      { title: 'Rock & Roll Hall of Fame', year: 1987 },
+      { title: 'Presidential Medal of Freedom', year: 2006 },
+      { title: 'Kennedy Center Honors', year: 1995 }
+    ]
+  },
+  'eric-clapton': {
+    artist: { name: 'Eric Clapton', genre: 'Rock', years: '1962–present', nationality: 'British', startYear: 1962, endYear: 2026 },
+    performances: [
+      { title: 'Bluesbreakers with Eric Clapton', year: 1966, genre: 'Blues', type: 'Album' },
+      { title: 'Layla and Other Assorted Love Songs', year: 1970, genre: 'Rock', type: 'Album' },
+      { title: '461 Ocean Boulevard', year: 1974, genre: 'Rock', type: 'Album' },
+      { title: 'Unplugged', year: 1992, genre: 'Rock', type: 'Album' },
+      { title: 'Crossroads Guitar Festival', year: 2004, genre: 'Blues', type: 'Live' }
+    ],
+    influences: {
+      by: ['Robert Johnson', 'Muddy Waters', 'B.B. King', 'Buddy Guy'],
+      on: ['Stevie Ray Vaughan', 'John Mayer', 'Derek Trucks', 'Gary Clark Jr.']
+    },
+    awards: [
+      { title: '18× Grammy Awards', year: 2007 },
+      { title: 'Rock & Roll Hall of Fame (3× inducted)', year: 2000 },
+      { title: 'CBE from Queen Elizabeth', year: 2004 },
+      { title: 'Crossroads Centre founded', year: 1998 }
+    ]
+  },
+  'chuck-berry': {
+    artist: { name: 'Chuck Berry', genre: 'Rock', years: '1953–2017', nationality: 'American', startYear: 1953, endYear: 2017 },
+    performances: [
+      { title: 'Maybellene', year: 1955, genre: 'Rock', type: 'Single' },
+      { title: 'Roll Over Beethoven', year: 1956, genre: 'Rock', type: 'Single' },
+      { title: 'Johnny B. Goode', year: 1958, genre: 'Rock', type: 'Single' },
+      { title: 'Chuck', year: 2017, genre: 'Rock', type: 'Album' }
+    ],
+    influences: {
+      by: ['Muddy Waters', 'T-Bone Walker', 'Nat King Cole'],
+      on: ['The Beatles', 'The Rolling Stones', 'Jimi Hendrix', 'AC/DC', 'Bruce Springsteen']
+    },
+    awards: [
+      { title: 'Rock & Roll Hall of Fame (1st class)', year: 1986 },
+      { title: 'Grammy Lifetime Achievement', year: 1984 },
+      { title: 'Kennedy Center Honors', year: 2000 }
+    ]
+  },
+  'kurt-cobain': {
+    artist: { name: 'Kurt Cobain', genre: 'Rock', years: '1987–1994', nationality: 'American', startYear: 1987, endYear: 1994 },
+    performances: [
+      { title: 'Bleach', year: 1989, genre: 'Rock', type: 'Album' },
+      { title: 'Nevermind', year: 1991, genre: 'Rock', type: 'Album' },
+      { title: 'MTV Unplugged in New York', year: 1994, genre: 'Rock', type: 'Live' },
+      { title: 'In Utero', year: 1993, genre: 'Rock', type: 'Album' }
+    ],
+    influences: {
+      by: ['Jimi Hendrix', 'Led Zeppelin', 'Black Flag', 'The Pixies', 'R.E.M.'],
+      on: ['Radiohead', 'Foo Fighters', 'My Chemical Romance', 'Twenty One Pilots']
+    },
+    awards: [
+      { title: 'Rock & Roll Hall of Fame (Nirvana)', year: 2014 },
+      { title: 'MTV Video Music Award', year: 1992 },
+      { title: 'Rolling Stone #45 Artist', year: 2004 }
+    ]
+  }
+};
+
+// ============================================================
+// App State
+// ============================================================
+let selectedArtists = [null, null];
+
+// ============================================================
+// Render Selection Grid
+// ============================================================
+function renderSelectGrid() {
+  const grid = document.getElementById('selectGrid');
+  const ids = Object.keys(compareData);
+
+  grid.innerHTML = ids.map(id => {
+    const a = compareData[id].artist;
+    const color = getGenreColor(a.genre);
+    return `
+      <div class="select-card" data-artist="${id}" tabindex="0" role="button" aria-label="Select ${a.name}">
+        <div class="select-card__avatar" style="background:${color}">${getInitials(a.name)}</div>
+        <div>
+          <div class="select-card__name">${a.name}</div>
+          <div class="select-card__genre">${a.genre} · ${a.years}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  grid.querySelectorAll('.select-card').forEach(card => {
+    card.addEventListener('click', () => toggleSelection(card.dataset.artist));
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSelection(card.dataset.artist); }
+    });
+  });
+}
+
+function toggleSelection(id) {
+  // If already selected, deselect
+  if (selectedArtists[0] === id) { selectedArtists[0] = null; }
+  else if (selectedArtists[1] === id) { selectedArtists[1] = null; }
+  // Add to next slot
+  else if (!selectedArtists[0]) { selectedArtists[0] = id; }
+  else if (!selectedArtists[1]) { selectedArtists[1] = id; }
+  else {
+    // Both full — replace second
+    selectedArtists[1] = id;
+  }
+  updateSelectionUI();
+}
+
+function updateSelectionUI() {
+  // Update cards
+  document.querySelectorAll('.select-card').forEach(card => {
+    const isSelected = selectedArtists.includes(card.dataset.artist);
+    card.classList.toggle('select-card--selected', isSelected);
+  });
+
+  // Update slots
+  [0, 1].forEach(i => {
+    const slot = document.getElementById(`slot${i + 1}`);
+    if (selectedArtists[i]) {
+      const a = compareData[selectedArtists[i]].artist;
+      const color = getGenreColor(a.genre);
+      slot.classList.add('selection-slot--filled');
+      slot.innerHTML = `
+        <div class="selection-slot__avatar" style="background:${color}">${getInitials(a.name)}</div>
+        <div class="selection-slot__name" style="color:${color}">${a.name}</div>
+      `;
+    } else {
+      slot.classList.remove('selection-slot--filled');
+      slot.innerHTML = `<span class="selection-slot__placeholder">Select ${i === 0 ? 'first' : 'second'} artist</span>`;
+    }
+  });
+
+  // Compare button
+  const btn = document.getElementById('compareBtn');
+  const ready = selectedArtists[0] && selectedArtists[1];
+  btn.classList.toggle('compare-btn--active', ready);
+}
+
+// ============================================================
+// Compare View Rendering
+// ============================================================
+function showCompare() {
+  if (!selectedArtists[0] || !selectedArtists[1]) return;
+
+  document.getElementById('selectionScreen').style.display = 'none';
+  document.getElementById('compareScreen').classList.add('active');
+
+  const left = compareData[selectedArtists[0]];
+  const right = compareData[selectedArtists[1]];
+
+  document.getElementById('compareTitle').textContent =
+    `${left.artist.name} vs ${right.artist.name}`;
+
+  renderSide('sideLeft', left, right);
+  renderSide('sideRight', right, left);
+  renderRuler(left, right);
+  renderOverlapBanner(left, right);
+}
+
+function renderSide(containerId, data, otherData) {
+  const container = document.getElementById(containerId);
+  const color = getGenreColor(data.artist.genre);
+
+  // Find common influences
+  const commonBy = data.influences.by.filter(n => otherData.influences.by.includes(n));
+  const commonOn = data.influences.on.filter(n => otherData.influences.on.includes(n));
+
+  let html = '';
+
+  // Header
+  html += `
+    <div class="compare-artist-header">
+      <div class="compare-artist-header__avatar" style="background:${color}">${getInitials(data.artist.name)}</div>
+      <div class="compare-artist-header__name">${data.artist.name}</div>
+      <div class="compare-artist-header__meta">
+        <span>${data.artist.years}</span>
+      </div>
+      <div class="compare-artist-header__genre-badge" style="color:${color}">
+        <span class="genre-dot" style="background:${color}"></span>
+        ${data.artist.genre}
+      </div>
+      <div class="compare-artist-header__nationality">${data.artist.nationality}</div>
+    </div>
+  `;
+
+  // Stats
+  html += `
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-box__value">${data.performances.length}</div>
+        <div class="stat-box__label">Key Works</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box__value">${data.influences.by.length + data.influences.on.length}</div>
+        <div class="stat-box__label">Connections</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box__value">${data.awards.length}</div>
+        <div class="stat-box__label">Awards</div>
+      </div>
+    </div>
+  `;
+
+  // Timeline
+  html += `<div class="compare-section">
+    <div class="compare-section__label">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      Key Works
+    </div>
+    <div class="timeline">`;
+
+  data.performances.sort((a, b) => a.year - b.year).forEach(p => {
+    const pColor = getGenreColor(p.genre || data.artist.genre);
+    html += `
+      <div class="timeline-item">
+        <div class="timeline-item__dot" style="border-color:${pColor}"></div>
+        <div class="timeline-item__year">${p.year}</div>
+        <div class="timeline-item__title">${p.title}</div>
+        <div class="timeline-item__type">
+          <span class="genre-dot" style="background:${pColor}"></span>
+          ${p.genre || data.artist.genre} · ${p.type || 'Album'}
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div></div>`;
+
+  // Influences
+  html += `<div class="compare-section">
+    <div class="compare-section__label">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      Influenced by
+    </div>
+    <div class="influence-list">`;
+
+  data.influences.by.forEach(name => {
+    const isCommon = commonBy.includes(name);
+    html += `<div class="influence-chip ${isCommon ? 'influence-chip--common' : ''}">
+      ${name}
+    </div>`;
+  });
+
+  html += `</div></div>`;
+
+  html += `<div class="compare-section">
+    <div class="compare-section__label">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+      Influenced
+    </div>
+    <div class="influence-list">`;
+
+  data.influences.on.forEach(name => {
+    const isCommon = commonOn.includes(name);
+    html += `<div class="influence-chip ${isCommon ? 'influence-chip--common' : ''}">
+      ${name}
+    </div>`;
+  });
+
+  html += `</div></div>`;
+
+  // Awards
+  html += `<div class="compare-section">
+    <div class="compare-section__label">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      Awards & Achievements
+    </div>`;
+
+  data.awards.forEach(award => {
+    html += `
+      <div class="award-item">
+        <div class="award-item__icon">◆</div>
+        <div>
+          <div class="award-item__text">${award.title}</div>
+          <div class="award-item__year">${award.year}</div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+
+  container.innerHTML = html;
+}
+
+// ============================================================
+// Render Central Timeline Ruler
+// ============================================================
+function renderRuler(left, right) {
+  const rulerEl = document.getElementById('compareRuler');
+  const allYears = [
+    ...left.performances.map(p => p.year),
+    ...right.performances.map(p => p.year),
+    left.artist.startYear, left.artist.endYear,
+    right.artist.startYear, right.artist.endYear
+  ];
+
+  const minYear = Math.min(...allYears);
+  const maxYear = Math.max(...allYears);
+  const padding = 40;
+  const height = Math.max(600, (maxYear - minYear) * 10 + padding * 2);
+
+  rulerEl.style.height = height + 'px';
+
+  const svg = d3.select(rulerEl).html('').append('svg')
+    .attr('width', 60)
+    .attr('height', height)
+    .attr('class', 'ruler-svg');
+
+  const yScale = d3.scaleLinear()
+    .domain([minYear, maxYear])
+    .range([padding, height - padding]);
+
+  // Overlap region
+  const overlapStart = Math.max(left.artist.startYear, right.artist.startYear);
+  const overlapEnd = Math.min(
+    left.artist.endYear === 2026 ? maxYear : left.artist.endYear,
+    right.artist.endYear === 2026 ? maxYear : right.artist.endYear
+  );
+
+  if (overlapStart < overlapEnd) {
+    svg.append('rect')
+      .attr('class', 'ruler-overlap')
+      .attr('x', 0)
+      .attr('y', yScale(overlapStart))
+      .attr('width', 60)
+      .attr('height', yScale(overlapEnd) - yScale(overlapStart))
+      .attr('rx', 4);
+  }
+
+  // Center line
+  svg.append('line')
+    .attr('class', 'ruler-line')
+    .attr('x1', 30).attr('y1', padding)
+    .attr('x2', 30).attr('y2', height - padding);
+
+  // Decade ticks
+  const startDecade = Math.floor(minYear / 10) * 10;
+  const endDecade = Math.ceil(maxYear / 10) * 10;
+  for (let y = startDecade; y <= endDecade; y += 10) {
+    if (y < minYear || y > maxYear) continue;
+    const yPos = yScale(y);
+
+    svg.append('line')
+      .attr('x1', 15).attr('y1', yPos)
+      .attr('x2', 45).attr('y2', yPos)
+      .attr('stroke', 'var(--border-strong)')
+      .attr('stroke-width', 1);
+
+    svg.append('text')
+      .attr('class', 'ruler-year')
+      .attr('x', 30)
+      .attr('y', yPos - 6)
+      .text(y);
+  }
+
+  // Artist activity range bars
+  const leftColor = getGenreColor(left.artist.genre);
+  const rightColor = getGenreColor(right.artist.genre);
+
+  svg.append('rect')
+    .attr('x', 4).attr('y', yScale(left.artist.startYear))
+    .attr('width', 4)
+    .attr('height', yScale(Math.min(left.artist.endYear, maxYear)) - yScale(left.artist.startYear))
+    .attr('fill', leftColor).attr('rx', 2).attr('opacity', 0.5);
+
+  svg.append('rect')
+    .attr('x', 52).attr('y', yScale(right.artist.startYear))
+    .attr('width', 4)
+    .attr('height', yScale(Math.min(right.artist.endYear, maxYear)) - yScale(right.artist.startYear))
+    .attr('fill', rightColor).attr('rx', 2).attr('opacity', 0.5);
+
+  // Performance dots on ruler
+  left.performances.forEach(p => {
+    svg.append('circle')
+      .attr('cx', 14).attr('cy', yScale(p.year))
+      .attr('r', 3).attr('fill', leftColor);
+  });
+
+  right.performances.forEach(p => {
+    svg.append('circle')
+      .attr('cx', 46).attr('cy', yScale(p.year))
+      .attr('r', 3).attr('fill', rightColor);
+  });
+}
+
+// ============================================================
+// Overlap Banner
+// ============================================================
+function renderOverlapBanner(left, right) {
+  const banner = document.getElementById('overlapBanner');
+  const overlapStart = Math.max(left.artist.startYear, right.artist.startYear);
+  const leftEnd = left.artist.endYear === 2026 ? new Date().getFullYear() : left.artist.endYear;
+  const rightEnd = right.artist.endYear === 2026 ? new Date().getFullYear() : right.artist.endYear;
+  const overlapEnd = Math.min(leftEnd, rightEnd);
+
+  // Common influences
+  const commonBy = left.influences.by.filter(n => right.influences.by.includes(n));
+  const commonOn = left.influences.on.filter(n => right.influences.on.includes(n));
+  const totalCommon = commonBy.length + commonOn.length;
+
+  let text = '';
+  if (overlapStart < overlapEnd) {
+    const years = overlapEnd - overlapStart;
+    text += `${years} overlapping years (${overlapStart}–${overlapEnd})`;
+  }
+  if (totalCommon > 0) {
+    if (text) text += ' · ';
+    text += `${totalCommon} shared connection${totalCommon > 1 ? 's' : ''} (★ marked)`;
+  }
+
+  if (text) {
+    banner.innerHTML = `<div class="overlap-banner">${text}</div>`;
+  } else {
+    banner.innerHTML = '';
+  }
+}
+
+// ============================================================
+// Swap
+// ============================================================
+function swapArtists() {
+  selectedArtists = [selectedArtists[1], selectedArtists[0]];
+  const left = compareData[selectedArtists[0]];
+  const right = compareData[selectedArtists[1]];
+
+  document.getElementById('compareTitle').textContent =
+    `${left.artist.name} vs ${right.artist.name}`;
+
+  renderSide('sideLeft', left, right);
+  renderSide('sideRight', right, left);
+  renderRuler(left, right);
+  renderOverlapBanner(left, right);
+}
+
+function backToSelection() {
+  document.getElementById('selectionScreen').style.display = '';
+  document.getElementById('compareScreen').classList.remove('active');
+  selectedArtists = [null, null];
+  updateSelectionUI();
+}
+
+// ============================================================
+// Event Listeners
+// ============================================================
+document.getElementById('compareBtn').addEventListener('click', showCompare);
+document.getElementById('swapBtn').addEventListener('click', swapArtists);
+document.getElementById('backToSelectBtn').addEventListener('click', backToSelection);
+
+// ============================================================
+// Init
+// ============================================================
+renderSelectGrid();
+
+// Pre-select a compelling pair for demo
+selectedArtists = ['jimi-hendrix', 'prince'];
+updateSelectionUI();
+</script>
+</body>
+</html>

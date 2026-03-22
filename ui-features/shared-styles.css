@@ -1,0 +1,271 @@
+/* ==========================================================================
+   Visual History of Music — Shared Design Tokens
+   ========================================================================== */
+
+/* ---------- Fonts ---------- */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ---------- CSS Custom Properties ---------- */
+:root {
+  /* Background & Surfaces */
+  --bg-root: #0a0a0f;
+  --bg-surface: #151520;
+  --bg-surface-raised: #1a1a2a;
+  --bg-surface-hover: #222235;
+  --bg-overlay: rgba(10, 10, 15, 0.85);
+
+  /* Text */
+  --text-primary: #e8e6e1;
+  --text-secondary: #b8b5af;
+  --text-muted: #8a8890;
+  --text-dim: #5a5860;
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-medium: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+
+  /* Genre Colors */
+  --genre-blues: #4a90d9;
+  --genre-jazz: #d4a843;
+  --genre-country: #c17a3a;
+  --genre-rock: #d94452;
+  --genre-soul: #3ab5a5;
+  --genre-electronic: #5dd477;
+  --genre-hiphop: #9b59b6;
+  --genre-pop: #e87ecf;
+  --genre-punk: #e8a62e;
+  --genre-metal: #8c8c8c;
+  --genre-rnb: #e06070;
+  --genre-folk: #a8c060;
+  --genre-funk: #f0a040;
+  --genre-reggae: #40b060;
+  --genre-classical: #c0a0d0;
+
+  /* Typography */
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Inter', -apple-system, system-ui, sans-serif;
+
+  /* Type Scale */
+  --text-xs: 0.75rem;     /* 12px */
+  --text-sm: 0.8125rem;   /* 13px */
+  --text-base: 0.875rem;  /* 14px */
+  --text-md: 1rem;        /* 16px */
+  --text-lg: 1.125rem;    /* 18px */
+  --text-xl: 1.375rem;    /* 22px */
+  --text-2xl: 1.75rem;    /* 28px */
+  --text-3xl: 2.25rem;    /* 36px */
+  --text-4xl: 3rem;       /* 48px */
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 20px rgba(255, 255, 255, 0.05);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-base: 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow: 500ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-morph: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---------- Base Reset ---------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: var(--bg-root);
+  overflow-x: hidden;
+}
+
+/* ---------- Typography ---------- */
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- Scrollbar ---------- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
+/* ---------- Utility Classes ---------- */
+.genre-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.genre-dot--lg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Genre color map */
+.genre-blues { background: var(--genre-blues); }
+.genre-jazz { background: var(--genre-jazz); }
+.genre-country { background: var(--genre-country); }
+.genre-rock { background: var(--genre-rock); }
+.genre-soul { background: var(--genre-soul); }
+.genre-electronic { background: var(--genre-electronic); }
+.genre-hiphop { background: var(--genre-hiphop); }
+.genre-pop { background: var(--genre-pop); }
+.genre-punk { background: var(--genre-punk); }
+.genre-metal { background: var(--genre-metal); }
+.genre-rnb { background: var(--genre-rnb); }
+.genre-folk { background: var(--genre-folk); }
+.genre-funk { background: var(--genre-funk); }
+.genre-reggae { background: var(--genre-reggae); }
+.genre-classical { background: var(--genre-classical); }
+
+/* Genre text colors */
+.genre-text-blues { color: var(--genre-blues); }
+.genre-text-jazz { color: var(--genre-jazz); }
+.genre-text-country { color: var(--genre-country); }
+.genre-text-rock { color: var(--genre-rock); }
+.genre-text-soul { color: var(--genre-soul); }
+.genre-text-electronic { color: var(--genre-electronic); }
+.genre-text-hiphop { color: var(--genre-hiphop); }
+.genre-text-pop { color: var(--genre-pop); }
+.genre-text-punk { color: var(--genre-punk); }
+.genre-text-metal { color: var(--genre-metal); }
+.genre-text-rnb { color: var(--genre-rnb); }
+.genre-text-folk { color: var(--genre-folk); }
+.genre-text-funk { color: var(--genre-funk); }
+.genre-text-reggae { color: var(--genre-reggae); }
+.genre-text-classical { color: var(--genre-classical); }
+
+/* ---------- Button Base ---------- */
+.vhm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast),
+              border-color var(--transition-fast),
+              transform var(--transition-fast);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.vhm-btn:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-medium);
+}
+
+.vhm-btn:active {
+  transform: scale(0.97);
+}
+
+.vhm-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.vhm-btn--ghost:hover {
+  background: var(--bg-surface);
+}
+
+/* ---------- Card Base ---------- */
+.vhm-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  :root {
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.875rem;
+    --text-4xl: 2.25rem;
+  }
+}
+
+/* ---------- Reduced Motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- Footer Attribution ---------- */
+.vhm-footer {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--text-dim);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-16);
+}
+
+.vhm-footer a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.vhm-footer a:hover {
+  color: var(--text-primary);
+}
